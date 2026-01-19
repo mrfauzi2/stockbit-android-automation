@@ -3,6 +3,7 @@
 
 
 Project ini adalah solusi Technical Test untuk posisi QA Engineer. Project ini mengotomatisasi pengujian aplikasi Android "My Demo App" (Sauce Labs) menggunakan \*\*Appium\*\*, \*\*Java\*\*, dan \*\*Cucumber Framework\*\* dengan pola desain \*\*Page Object Model (POM)\*\*.
+Rekaman testing : https://youtu.be/oyO08rLfhr8 
 
 
 
