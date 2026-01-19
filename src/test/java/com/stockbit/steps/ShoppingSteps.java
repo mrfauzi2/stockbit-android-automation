@@ -81,4 +81,16 @@ public class ShoppingSteps {
         String actualMsg = checkoutPage.getCompleteMessage();
         Assert.assertEquals(actualMsg, expectedMsg);
     }
+
+    @When("I tap the {string} button without filling data")
+    public void iTapTheButtonWithoutFillingData(String btnName) {
+        // Kita panggil method khusus di Page Object yang sudah pakai Scroll otomatis
+        checkoutPage.clickToPaymentButtonOnly();
+    }
+
+    @Then("I should see error messages on the checkout form")
+    public void iShouldSeeErrorMessagesOnTheCheckoutForm() {
+        boolean isErrorVisible = checkoutPage.isErrorDisplayed();
+        Assert.assertTrue(isErrorVisible, "Please provide your address.");
+    }
 }

@@ -37,40 +37,85 @@ public class CheckoutPage {
     // Locator Judul Sukses (Menggunakan ID agar stabil)
     By checkoutCompleteTitle = AppiumBy.id("com.saucelabs.mydemoapp.android:id/completeTV");
 
+    // --- TAMBAHAN LOCATOR ERROR ---
+    By fullNameError = AppiumBy.id("com.saucelabs.mydemoapp.android:id/fullNameErrorTV");
+    By addressError = AppiumBy.id("com.saucelabs.mydemoapp.android:id/address1ErrorTV");
+    By cityError = AppiumBy.id("com.saucelabs.mydemoapp.android:id/cityErrorTV");
+    By zipError = AppiumBy.id("com.saucelabs.mydemoapp.android:id/zipErrorTV");
+    By countryError = AppiumBy.id("com.saucelabs.mydemoapp.android:id/countryErrorTV");
+
     public CheckoutPage(AndroidDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
     }
 
-    // --- METHODS ---
-
-    public void inputShipping(String name, String address, String city, String zip, String country) {
+    // =========================================================================
+    // HELPER: RESCUE LOGIC (Dipisahkan agar bisa dipakai di Positif & Negatif)
+    // =========================================================================
+    private void ensureUserIsOnCheckoutPage() {
         try {
-            // Cek apakah halaman shipping muncul dalam 3 detik?
+            // Cek cepat: Apakah form nama ada? (Artinya kita aman di Checkout Page)
             WebDriverWait fastWait = new WebDriverWait(driver, Duration.ofSeconds(3));
             fastWait.until(ExpectedConditions.visibilityOfElementLocated(fullNameInput));
         } catch (Exception e) {
-            // Jika tidak, cek apakah terlempar ke halaman Login?
-            System.out.println("Shipping tidak muncul. Mengecek Login Page...");
+            // Jika tidak ada, curiga kita terlempar ke Login Page
+            System.out.println("⚠️ Halaman Checkout tidak ditemukan. Mengecek Login Page...");
             try {
                 if (driver.findElement(loginBtnRescue).isDisplayed()) {
-                    System.out.println("Login Ulang Otomatis...");
+                    System.out.println("🔄 Sesi habis. Melakukan Login Ulang Otomatis...");
+
                     driver.findElement(loginUserRescue).sendKeys("bod@example.com");
                     driver.findElement(loginPassRescue).sendKeys("10203040");
                     driver.findElement(loginBtnRescue).click();
+
+                    // Tunggu loading balik ke checkout (Hard wait sebentar untuk transisi)
+                    Thread.sleep(2000);
                 }
             } catch (Exception ex) {
-                // Ignore jika bukan halaman login
+                // Bukan halaman login juga? Biarkan flow lanjut dan error secara natural.
             }
         }
+    }
 
-        // Lanjut input shipping
+    // =========================================================================
+    // PUBLIC METHODS
+    // =========================================================================
+
+    public void inputShipping(String name, String address, String city, String zip, String country) {
+        // 1. Pastikan kita ada di halaman Checkout (Login ulang jika perlu)
+        ensureUserIsOnCheckoutPage();
+
+        // 2. Lanjut input shipping
         wait.until(ExpectedConditions.visibilityOfElementLocated(fullNameInput)).sendKeys(name);
         driver.findElement(addressInput).sendKeys(address);
         driver.findElement(cityInput).sendKeys(city);
         driver.findElement(zipInput).sendKeys(zip);
         driver.findElement(countryInput).sendKeys(country);
-        driver.findElement(toPaymentBtn).click();
+
+        // 3. Gunakan method klik yang aman (pakai scroll)
+        clickToPaymentButtonOnly();
+    }
+
+    public void clickToPaymentButtonOnly() {
+        // 1. Pastikan kita ada di halaman Checkout (Login ulang jika perlu)
+        // Ini penting untuk Negative Test jika sesi habis pas mau klik
+        ensureUserIsOnCheckoutPage();
+
+        try {
+            driver.hideKeyboard(); // Tutup keyboard biar lega
+        } catch (Exception e) {}
+
+        // SCROLL OTOMATIS cari tombol ID 'paymentBtn'
+        try {
+            String scrollScript = "new UiScrollable(new UiSelector().scrollable(true))" +
+                    ".scrollIntoView(new UiSelector().resourceId(\"com.saucelabs.mydemoapp.android:id/paymentBtn\"));";
+            driver.findElement(AppiumBy.androidUIAutomator(scrollScript));
+        } catch (Exception e) {
+            // Abaikan kalau tombol sudah kelihatan tanpa scroll
+        }
+
+        // Klik tombolnya
+        wait.until(ExpectedConditions.visibilityOfElementLocated(toPaymentBtn)).click();
     }
 
     public void inputPayment(String name, String card, String exp, String cvv) {
@@ -89,5 +134,14 @@ public class CheckoutPage {
     // ✅ Method ini untuk verifikasi pesan sukses
     public String getCompleteMessage() {
         return wait.until(ExpectedConditions.visibilityOfElementLocated(checkoutCompleteTitle)).getText();
+    }
+
+    public boolean isErrorDisplayed() {
+        try {
+            // Cek apakah minimal satu error muncul (misal di Nama)
+            return wait.until(ExpectedConditions.visibilityOfElementLocated(fullNameError)).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
